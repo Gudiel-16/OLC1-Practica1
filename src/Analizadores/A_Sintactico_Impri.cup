@@ -1,0 +1,249 @@
+/*----------------------AREA 1: CODIGO DE USUARIO-------------------------*/
+
+//---------------> importaciones, paquetes
+package Analizadores;
+import java_cup.runtime.Symbol;
+import java.io.*;
+import java.util.*;
+import java.text.*;
+import java.util.Stack;
+import javax.swing.table.DefaultTableModel;
+
+
+//---------------> codigo para el parser, variables, metodos
+parser code
+{:
+        
+    //para imprimir en consola
+    public static Stack<String> pila_imprimirConsola = new Stack<String>();
+    public static Stack<String> pila_imprimirErrores = new Stack<String>();
+
+    //guarda los modelos de tabla
+    public HashMap<String,DefaultTableModel> hmTablasArchivos= new HashMap<String,DefaultTableModel>();
+    
+    //para guardar variables y verificar si existe la variable
+    public HashMap<String,Object> alExistenciaDeVariable= new HashMap<String,Object>();
+
+
+    public void imprimir(String impre)
+    {
+        //if(banderaVariable==true) //sino existe alguna variable seria false y no imprimiria
+        //{
+            pila_imprimirConsola.push(impre);
+        //}
+        //banderaVariable=true; //si viene false, cambia de nuevo a true para haci poder hacer el mismo analisis en la siguiente impresion
+    }
+
+    public void parserPrincipal(String txtArea)
+    {
+        try {
+            Analizador_Lexico lexico= new Analizador_Lexico(new BufferedReader(new StringReader(txtArea)));
+            analisis_sintactico sintactico = new analisis_sintactico(lexico);
+            sintactico.parse(); 
+            pila_imprimirErrores = (Stack<String>)sintactico.pila_imprimirErrores; // no .clone porque sino no se vacia
+            hmTablasArchivos= (HashMap) sintactico.hmTablasArchivos.clone();
+            alExistenciaDeVariable=(HashMap) sintactico.alExistenciaDeVariable.clone();
+
+            Analizador_Lexico lexicoF= new Analizador_Lexico(new BufferedReader(new StringReader(txtArea)));
+            analisis_sintactico_funciones sintacticoF = new analisis_sintactico_funciones(lexicoF);
+            sintacticoF.pila_imprimirErrores=(Stack<String>)sintactico.pila_imprimirErrores;
+            sintacticoF.hmTablasArchivos=(HashMap) sintactico.hmTablasArchivos.clone();
+            sintacticoF.alExistenciaDeVariable=(HashMap) sintactico.alExistenciaDeVariable.clone();
+            sintacticoF.parse(); 
+            pila_imprimirErrores = (Stack<String>)sintacticoF.pila_imprimirErrores; // no .clone porque sino no se vacia
+            hmTablasArchivos= (HashMap) sintacticoF.hmTablasArchivos.clone();
+            alExistenciaDeVariable=(HashMap) sintacticoF.alExistenciaDeVariable.clone();
+        } catch (Exception e) {
+        }
+    }
+
+    //Metodo al que se llama automaticamente ante algun error sintactico
+    public void syntax_error(Symbol s)
+    {        
+        String lexema = s.value.toString();
+        int fila = s.right;
+        int columna = s.left;
+
+        //String aa="ERROR SINTACTICO: IMPRI " + "Lexema: " + lexema + " Fila: " + fila + " Columna: " + columna + "\n";
+        //System.out.println(aa);        
+        //System.out.println("\t\tLexema: "+lexema);
+        //System.out.println("\t\tFila: "+fila);
+        //System.out.println("\t\tColumna: "+columna);
+                
+                
+    }
+
+    //Metodo al que se llama en el momento en que ya no es posible una recuperacion de errores
+    public void unrecovered_syntax_error(Symbol s) throws java.lang.Exception
+    {        
+        String lexema = s.value.toString();
+        int fila = s.right;
+        int columna = s.left;
+        
+        //System.out.println("!!!!!!! Error Sintactico !!!!!!! IMPRI ");
+        //System.out.println("\t\tLexema: "+lexema);
+        //System.out.println("\t\tFila: "+fila);
+        //System.out.println("\t\tColumna: "+columna);
+        
+
+    }
+:}
+
+//-------------> Codigo para las acciones gramaticales
+action code
+{:
+:}
+
+/*----------------------AREA 2: DECLARACIONES-------------------------*/
+
+//--------------->declaracion de terminales
+//-------->simbolos
+terminal igual, corchabre, corchcierra, llaveabre, llavecierra, parenabre, parencierra, coma, puntocoma, punto, menos;
+
+//--------> operadores
+terminal mayor, menor, mayorigualque, menorigualque, igualigual, diferenteque;
+
+//-------->de palabras reservadas
+terminal claves, registros, archivo, leerarchivo, imprimir, numerico, sumar, contar, promedio, contarsi, cadenareserv, obtenersi, graficar;
+
+//-------->de expresiones regulares
+terminal id, cadena, enteroposit;
+
+//--------------->declaracion de no terminales
+non terminal INICIO, OPERADORES, VALORES_CLAVE, REGISTROS, VALORES_REGISTROS, VALOR, IMPRICOCAT;
+
+start with INICIO;
+
+/*----------------------AREA 3: REGLAS SEMANTICAS-------------------------*/
+
+INICIO::= claves igual corchabre VALORES_CLAVE corchcierra INICIO
+
+        | registros igual corchabre REGISTROS corchcierra INICIO
+
+        /*| imprimir parenabre id:a parencierra puntocoma INICIO                  //----> para imprimir solo una variable
+            {: if(alExistenciaDeVariable.containsKey(a.toString()))
+                {
+                   String valor=alExistenciaDeVariable.get(a).toString();
+                   imprimir(valor);
+                }else
+                {  
+                    String exis="LA VARIABLE " + a.toString() + " PARA IMPRIMIR, NO EXISTE" ;
+                    pila_imprimirErrores.push(exis); 
+                } :} 
+
+        | imprimir parenabre cadena:a parencierra puntocoma INICIO              //----> para imprimir solo una cadena
+        {:  String valor=a.toString().substring(1,a.toString().length()-1); 
+            valor+="\n";
+            imprimir(valor); :} */
+
+        | imprimir parenabre IMPRICOCAT:a parencierra puntocoma INICIO
+        {:  String valor=a.toString(); 
+            valor+="\n";
+            imprimir(valor); :} 
+ 
+        | archivo id igual leerarchivo parenabre cadena parencierra puntocoma INICIO
+
+        | numerico id igual sumar parenabre id coma cadena parencierra puntocoma INICIO
+
+        | numerico id igual contar parenabre id parencierra puntocoma INICIO 
+
+        | numerico id igual promedio parenabre id coma cadena parencierra puntocoma INICIO
+
+        | numerico id igual contarsi parenabre id coma cadena coma OPERADORES coma VALOR parencierra puntocoma INICIO
+
+        | numerico id igual contarsi parenabre id coma cadena coma OPERADORES coma cadena parencierra puntocoma INICIO
+
+        | cadenareserv id igual obtenersi parenabre id coma cadena coma OPERADORES coma VALOR parencierra puntocoma INICIO
+
+        | cadenareserv id igual obtenersi parenabre id coma cadena coma OPERADORES coma cadena parencierra puntocoma INICIO
+
+        | graficar parenabre cadena coma cadena coma id coma cadena coma cadena parencierra puntocoma INICIO
+
+        | ;
+
+OPERADORES::= mayor
+            | menor
+            | mayorigualque
+            | menorigualque
+            | igualigual
+            | diferenteque ;
+
+VALOR::= enteroposit
+        | menos enteroposit
+        | enteroposit punto enteroposit
+        | menos enteroposit punto enteroposit ;
+
+VALORES_CLAVE::= cadena coma VALORES_CLAVE
+                | cadena ;
+
+
+REGISTROS::= llaveabre VALORES_REGISTROS llavecierra REGISTROS
+                    {:  :} 
+             | ;          
+
+IMPRICOCAT::= IMPRICOCAT:str coma cadena:a
+            {: String cade=a.toString().substring(1,a.toString().length()-1); String conca= str.toString() + cade; RESULT=conca;
+            :}
+
+            | IMPRICOCAT:str coma id:a 
+             {: if(alExistenciaDeVariable.containsKey(a.toString()))
+                {
+                    String iden= alExistenciaDeVariable.get(a).toString(); 
+                    String conca= str.toString()+iden ; 
+                    RESULT=conca;
+                }else
+                {  
+                    String exis="LA VARIABLE " + a.toString() + " PARA IMPRIMIR, NO EXISTE" ;
+                    pila_imprimirErrores.push(exis);
+                    RESULT="";
+                } :}
+
+            | cadena:a
+             {: String cade=a.toString().substring(1,a.toString().length()-1); RESULT=cade; :}
+
+            | id:a 
+             {: if(alExistenciaDeVariable.containsKey(a.toString()))
+                {
+                    String iden=alExistenciaDeVariable.get(a).toString(); 
+                    RESULT=iden;
+                }else
+                {  
+                    String exis="LA VARIABLE " + a.toString() + " PARA IMPRIMIR, NO EXISTE" ;
+                    pila_imprimirErrores.push(exis);
+                    RESULT="";
+                }:};
+
+VALORES_REGISTROS::= cadena:a coma VALORES_REGISTROS
+                    {: :}
+                    
+                    | enteroposit:a coma VALORES_REGISTROS
+                    {::}
+
+                    | menos:a enteroposit:b coma VALORES_REGISTROS
+                    {::}
+
+                    | enteroposit:a punto:b enteroposit:c coma VALORES_REGISTROS
+                    {::}
+
+                    | menos:a enteroposit:b punto:c enteroposit:d coma VALORES_REGISTROS
+                    {::}
+
+                    | enteroposit:a punto:b enteroposit:c
+                    {::}
+
+                    | menos:a enteroposit:b punto:c enteroposit:d
+                    {::}
+
+                    | cadena:a
+                    {::}
+                    
+                    | enteroposit:a
+                    {::} 
+
+                    | menos:a enteroposit:b
+                    {::}   ;
+
+
+
+//-----------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------

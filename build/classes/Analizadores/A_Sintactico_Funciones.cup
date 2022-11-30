@@ -1,0 +1,975 @@
+/*----------------------AREA 1: CODIGO DE USUARIO-------------------------*/
+
+//---------------> importaciones, paquetes
+package Analizadores;
+import java_cup.runtime.Symbol;
+import java.io.*;
+import java.util.*;
+import java.text.*;
+import java.util.Stack;
+import javax.swing.JTable;
+import javax.swing.table.DefaultTableModel;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartUtilities;
+import org.jfree.chart.JFreeChart;
+import org.jfree.chart.plot.PlotOrientation;
+import org.jfree.data.category.DefaultCategoryDataset;
+
+//---------------> codigo para el parser, variables, metodos
+parser code
+{:      
+    
+    //para el metodo leer archivos
+    Stack<String> pila_claves = new Stack<String>();
+    Stack<Object> pila_registros = new Stack<Object>();
+
+    //para las tablas de registros de archivos
+    public DefaultTableModel modeloTablaArchivo;
+    public static HashMap<String,DefaultTableModel> hmTablasArchivos= new HashMap<String,DefaultTableModel>();
+    
+    //para errores
+    public static Stack<String> pila_imprimirErrores = new Stack<String>();
+
+    //para guardar variables y verificar si existe la variable
+    public static HashMap<String,Object> alExistenciaDeVariable= new HashMap<String,Object>();
+
+    public int contCuantasClaves=0;
+    public int contRegistros=0;
+        
+    // ------------------------------------------------------ FUNCION SUMAR------------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------------------------------------------------------
+    public void funcionSumar(DefaultTableModel tabla, String nomClave, String idTipoArchivo, String nomFuncion)
+    {
+        boolean encontrado=false;
+        int numColumn=0;
+        Double totalSuma=0.0;
+        
+                for (int i = 0; i < tabla.getColumnCount(); i++) 
+                {
+                    String claveActual=tabla.getValueAt(1, i).toString();
+                    if(claveActual.equals(nomClave))
+                    {
+                        encontrado=true;
+                        numColumn=i;
+                    }
+                }
+
+                if(encontrado==true)
+                {
+                        if(tabla.getValueAt(0, numColumn).toString().equals("numerico"))
+                        {
+                                for (int i = 2; i < tabla.getRowCount(); i++) 
+                                {
+                                    Double temp=Double.parseDouble(tabla.getValueAt(i, numColumn).toString());
+                                    totalSuma=totalSuma+temp;
+                                } 
+                                String aux=totalSuma.toString();
+                                alExistenciaDeVariable.put(nomFuncion,aux);
+                        }
+                        else{
+                            String err="LA CLAVE: " + nomClave + " DE LA FUNCION SUMAR: " + nomFuncion + " NO ES TIPO NUMERICO" ;
+                            pila_imprimirErrores.push(err);
+                        }
+                }
+                else{
+                    String err="LA CLAVE DE LA FUNCION SUMAR: " + nomFuncion + " NO HA SIDO ENCONTRADA EN EL ARCHIVO: " + idTipoArchivo;
+                    pila_imprimirErrores.push(err);
+                }
+        
+    }   
+
+    // ------------------------------------------------------ FUNCION CONTRAR------------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------------------------------------------------------
+    public void funcionContar(DefaultTableModel tabla, String nomFuncion)
+    { 
+        int cant=tabla.getRowCount();
+        Integer cant2=cant-2; //las primeras dos son: tipo de dato y nombre de clave, por eso el -2
+        String aux=cant2.toString();
+        
+        alExistenciaDeVariable.put(nomFuncion,aux);
+
+    }
+
+    // ------------------------------------------------------ FUNCION PROMEDIO----------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------------------------------------------------------
+    public void funcionPromedio(DefaultTableModel tabla, String nomClave, String idTipoArchivo, String nomFuncion)
+    {
+        boolean encontrado=false;
+        int numColumn=0;
+        Double totalSuma=0.0;
+        
+                for (int i = 0; i < tabla.getColumnCount(); i++) 
+                {
+                    String claveActual=tabla.getValueAt(1, i).toString();
+                    if(claveActual.equals(nomClave))
+                    {
+                        encontrado=true;
+                        numColumn=i;
+                    }
+                }
+
+                if(encontrado==true)
+                {
+                        if(tabla.getValueAt(0, numColumn).toString().equals("numerico"))
+                        {
+                                for (int i = 2; i < tabla.getRowCount(); i++) 
+                                {
+                                    Double temp=Double.parseDouble(tabla.getValueAt(i, numColumn).toString());
+                                    totalSuma=totalSuma+temp;
+                                } 
+                                int cant=tabla.getRowCount();
+                                int cant2=cant-2;
+                                Double cont3=totalSuma / cant2;
+                                String aux=cont3.toString() ;
+                                alExistenciaDeVariable.put(nomFuncion,aux);
+                        }
+                        else{
+                            String err="LA CLAVE: " + nomClave + " DE LA FUNCION PROMEDIO: " + nomFuncion + " NO ES TIPO NUMERICO" ;
+                            pila_imprimirErrores.push(err);
+                        }
+                }
+                else{
+                    String err="LA CLAVE DE LA FUNCION PROMEDIO: " + nomFuncion + " NO HA SIDO ENCONTRADA EN EL ARCHIVO: " + idTipoArchivo ;
+                    pila_imprimirErrores.push(err);
+                }        
+    }   
+
+    // ------------------------------------------------------ FUNCION CONTARSI----------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------------------------------------------------------
+    public void funcionContarSi(DefaultTableModel tabla, String nomClave, String operador, String valor, String idTipoArchivo, String nomFuncion)
+    {
+        boolean encontrado=false;
+        int numColumn=0;
+        Double totalSuma=0.0;
+        Integer contCuantos=0;
+        
+                for (int i = 0; i < tabla.getColumnCount(); i++) 
+                {
+                    String claveActual=tabla.getValueAt(1, i).toString();
+                    if(claveActual.equals(nomClave))
+                    {
+                        encontrado=true;
+                        numColumn=i;
+                    }
+                }
+
+                if(encontrado==true)
+                {
+                        if(tabla.getValueAt(0, numColumn).toString().equals("numerico"))
+                        {
+                                if(operador.equals(">"))
+                                {
+                                        Double val=Double.parseDouble(valor);
+                                        for (int i = 2; i < tabla.getRowCount(); i++) 
+                                        {
+                                            Double valTabla=Double.parseDouble(tabla.getValueAt(i, numColumn).toString());
+                                            if(valTabla>val)
+                                            {
+                                               contCuantos=contCuantos+1; 
+                                            }
+                                        } 
+                                        String aux=contCuantos.toString() ;
+                                        alExistenciaDeVariable.put(nomFuncion,aux);
+                                }
+                                else if(operador.equals("<"))
+                                {
+                                        Double val=Double.parseDouble(valor);
+                                        for (int i = 2; i < tabla.getRowCount(); i++) 
+                                        {
+                                            Double valTabla=Double.parseDouble(tabla.getValueAt(i, numColumn).toString());
+                                            if(valTabla<val)
+                                            {
+                                               contCuantos=contCuantos+1; 
+                                            }
+                                        } 
+                                        String aux=contCuantos.toString() ;
+                                        alExistenciaDeVariable.put(nomFuncion,aux);
+                                }
+                                else if(operador.equals(">="))
+                                {
+                                        Double val=Double.parseDouble(valor);
+                                        for (int i = 2; i < tabla.getRowCount(); i++) 
+                                        {
+                                            Double valTabla=Double.parseDouble(tabla.getValueAt(i, numColumn).toString());
+                                            if(valTabla>=val)
+                                            {
+                                               contCuantos=contCuantos+1; 
+                                            }
+                                        } 
+                                        String aux=contCuantos.toString() ;
+                                        alExistenciaDeVariable.put(nomFuncion,aux);
+                                }
+                                else if(operador.equals("<="))
+                                {
+                                        Double val=Double.parseDouble(valor);
+                                        for (int i = 2; i < tabla.getRowCount(); i++) 
+                                        {
+                                            Double valTabla=Double.parseDouble(tabla.getValueAt(i, numColumn).toString());
+                                            if(valTabla<=val)
+                                            {
+                                               contCuantos=contCuantos+1; 
+                                            }
+                                        } 
+                                        String aux=contCuantos.toString() ;
+                                        alExistenciaDeVariable.put(nomFuncion,aux);
+                                }
+                                else if(operador.equals("=="))
+                                {   
+                                        Double val=Double.parseDouble(valor);
+                                        for (int i = 2; i < tabla.getRowCount(); i++) 
+                                        {
+                                            Double valTabla=Double.parseDouble(tabla.getValueAt(i, numColumn).toString());
+                                            if(Objects.equals(valTabla, val))
+                                            {
+                                               contCuantos=contCuantos+1; 
+                                            }
+                                        } 
+                                        String aux=contCuantos.toString() ;
+                                        alExistenciaDeVariable.put(nomFuncion,aux);
+                                }
+                                else if(operador.equals("!="))
+                                {
+                                        Double val=Double.parseDouble(valor);
+                                        for (int i = 2; i < tabla.getRowCount(); i++) 
+                                        {
+                                            Double valTabla=Double.parseDouble(tabla.getValueAt(i, numColumn).toString());
+                                            if(!Objects.equals(valTabla, val))
+                                            {
+                                               contCuantos=contCuantos+1; 
+                                            }
+                                        } 
+                                        String aux=contCuantos.toString() ;
+                                        alExistenciaDeVariable.put(nomFuncion,aux);
+                                }                                                                
+                        }
+                        else{
+                            String err="LA CLAVE: " + nomClave + " DE LA FUNCION CONTARSI: " + nomFuncion + " NO ES TIPO NUMERICO" ;
+                            pila_imprimirErrores.push(err);
+                        }
+                }
+                else{
+                    String err="LA CLAVE: " + nomClave + " DE LA FUNCION CONTARSI: " + nomFuncion + " NO HA SIDO ENCONTRADA EN EL ARCHIVO: " + idTipoArchivo;
+                    pila_imprimirErrores.push(err);
+                } 
+        
+    }
+
+    // ------------------------------------------------------ FUNCION CONTARSI CADENA----------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------------------------------------------------------
+    public void funcionContarSiCadena(DefaultTableModel tabla, String nomClave, String operador, String valor, String idTipoArchivo, String nomFuncion)
+    {
+        boolean encontrado=false;
+        int numColumn=0;
+        Double totalSuma=0.0;
+        Integer contCuantos=0;
+        
+                for (int i = 0; i < tabla.getColumnCount(); i++) 
+                {
+                    String claveActual=tabla.getValueAt(1, i).toString();
+                    if(claveActual.equals(nomClave))
+                    {
+                        encontrado=true;
+                        numColumn=i;
+                    }
+                }
+
+                if(encontrado==true)
+                {
+                        if(tabla.getValueAt(0, numColumn).toString().equals("string"))
+                        {                                                               
+                                if(operador.equals(">"))
+                                {
+                                   String err="LA CLAVE: " + nomClave + " DE LA FUNCION CONTARSI: " + nomFuncion + " NO PUEDE HACER EL TIPOD DE COMPARACION '>' " ;
+                                   pila_imprimirErrores.push(err);     
+                                }
+                                else if(operador.equals("<"))
+                                {
+                                   String err="LA CLAVE: " + nomClave + " DE LA FUNCION CONTARSI: " + nomFuncion + " NO PUEDE HACER EL TIPOD DE COMPARACION '<' " ;
+                                   pila_imprimirErrores.push(err);      
+                                }
+                                else if(operador.equals(">="))
+                                {
+                                   String err="LA CLAVE: " + nomClave + " DE LA FUNCION CONTARSI: " + nomFuncion + " NO PUEDE HACER EL TIPOD DE COMPARACION '>=' " ;
+                                   pila_imprimirErrores.push(err);      
+                                }
+                                else if(operador.equals("<="))
+                                {
+                                   String err="LA CLAVE: " + nomClave + " DE LA FUNCION CONTARSI: " + nomFuncion + " NO PUEDE HACER EL TIPOD DE COMPARACION '<=' " ;
+                                   pila_imprimirErrores.push(err);      
+                                }
+                                else if(operador.equals("=="))
+                                {   
+                                        for (int i = 2; i < tabla.getRowCount(); i++) 
+                                        {
+                                            String valTabla=tabla.getValueAt(i, numColumn).toString();
+                                            if(valor.equals(valTabla))
+                                            {
+                                               contCuantos=contCuantos+1; 
+                                            }
+                                        } 
+                                        String aux=contCuantos.toString() ;
+                                        alExistenciaDeVariable.put(nomFuncion,aux);
+                                }
+                                else if(operador.equals("!="))
+                                {
+                                        for (int i = 2; i < tabla.getRowCount(); i++) 
+                                        {
+                                            String valTabla=tabla.getValueAt(i, numColumn).toString();
+                                            if(!valor.equals(valTabla))
+                                            {
+                                               contCuantos=contCuantos+1; 
+                                            }
+                                        } 
+                                        String aux=contCuantos.toString() ;
+                                        alExistenciaDeVariable.put(nomFuncion,aux);
+                                }                                                                
+                        }
+                        else{
+                            String err="LA CLAVE: " + nomClave + " DE LA FUNCION CONTARSI: " + nomFuncion + " NO ES TIPO CADENA" ;
+                            pila_imprimirErrores.push(err);
+                        }
+                }
+                else{
+                    String err="LA CLAVE: " + nomClave + " DE LA FUNCION CONTARSI: " + nomFuncion + " NO HA SIDO ENCONTRADA EN EL ARCHIVO: " + idTipoArchivo;
+                    pila_imprimirErrores.push(err);
+                }         
+    }
+
+    // ------------------------------------------------------ FUNCION OBTENERSI----------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------------------------------------------------------
+    public void funcionObtenerSi(DefaultTableModel tabla, String nomClave, String operador, String valor, String idTipoArchivo, String nomFuncion)
+    {
+        boolean encontrado=false;
+        int numColumn=0;
+        String cadenaRegis="[ \n";
+        
+                for (int i = 0; i < tabla.getColumnCount(); i++) 
+                {
+                    String claveActual=tabla.getValueAt(1, i).toString();
+                    if(claveActual.equals(nomClave))
+                    {
+                        encontrado=true;
+                        numColumn=i;
+                    }
+                }
+
+                if(encontrado==true)
+                {
+                        if(tabla.getValueAt(0, numColumn).toString().equals("numerico"))
+                        {
+                                if(operador.equals(">"))
+                                {
+                                        Double val=Double.parseDouble(valor);
+                                        for (int i = 2; i < tabla.getRowCount(); i++) 
+                                        {                                           
+                                            Double valTabla=Double.parseDouble(tabla.getValueAt(i, numColumn).toString());
+                                            if(valTabla>val)
+                                            {
+                                                    cadenaRegis+="{" ;
+                                                    for (int j = 0; j < tabla.getColumnCount(); j++) 
+                                                    {
+                                                         String clave=tabla.getValueAt(1, j).toString(); //obtengo clave
+                                                         String clave2=clave.substring(1,clave.length()-1); //quito comillas de clave
+                                                         String registro=tabla.getValueAt(i,j).toString(); //obtengo el registro de esa clave
+                                                         cadenaRegis+=clave2 + ":" ;
+                                                         cadenaRegis+=registro + "," ;
+                                                    }
+                                                    cadenaRegis+="} \n" ;
+                                            }                                            
+                                        }
+                                        cadenaRegis += "]" ;
+                                        String aux=cadenaRegis;
+                                        alExistenciaDeVariable.put(nomFuncion,aux);
+                                        
+                                }
+                                else if(operador.equals("<"))
+                                {
+                                        Double val=Double.parseDouble(valor);
+                                        for (int i = 2; i < tabla.getRowCount(); i++) 
+                                        {                                           
+                                            Double valTabla=Double.parseDouble(tabla.getValueAt(i, numColumn).toString());
+                                            if(valTabla<val)
+                                            {
+                                                    cadenaRegis+="{" ;
+                                                    for (int j = 0; j < tabla.getColumnCount(); j++) 
+                                                    {
+                                                         String clave=tabla.getValueAt(1, j).toString(); //obtengo clave
+                                                         String clave2=clave.substring(1,clave.length()-1); //quito comillas de clave
+                                                         String registro=tabla.getValueAt(i,j).toString(); //obtengo el registro de esa clave
+                                                         cadenaRegis+=clave2 + ":" ;
+                                                         cadenaRegis+=registro + "," ;
+                                                    }
+                                                    cadenaRegis+="} \n" ;
+                                            }                                            
+                                        }
+                                        cadenaRegis += "] \n";
+                                        String aux=cadenaRegis;
+                                        alExistenciaDeVariable.put(nomFuncion,aux);
+                                }
+                                else if(operador.equals(">="))
+                                {
+                                       Double val=Double.parseDouble(valor);
+                                        for (int i = 2; i < tabla.getRowCount(); i++) 
+                                        {                                           
+                                            Double valTabla=Double.parseDouble(tabla.getValueAt(i, numColumn).toString());
+                                            if(valTabla>=val)
+                                            {
+                                                    cadenaRegis+="{" ;
+                                                    for (int j = 0; j < tabla.getColumnCount(); j++) 
+                                                    {
+                                                         String clave=tabla.getValueAt(1, j).toString(); //obtengo clave
+                                                         String clave2=clave.substring(1,clave.length()-1); //quito comillas de clave
+                                                         String registro=tabla.getValueAt(i,j).toString(); //obtengo el registro de esa clave
+                                                         cadenaRegis+=clave2 + ":" ;
+                                                         cadenaRegis+=registro + "," ;
+                                                    }
+                                                    cadenaRegis+="} \n" ;
+                                            }                                            
+                                        }
+                                        cadenaRegis += "] ";
+                                        String aux=cadenaRegis;
+                                        alExistenciaDeVariable.put(nomFuncion,aux);
+                                }
+                                else if(operador.equals("<="))
+                                {
+                                        Double val=Double.parseDouble(valor);
+                                        for (int i = 2; i < tabla.getRowCount(); i++) 
+                                        {                                           
+                                            Double valTabla=Double.parseDouble(tabla.getValueAt(i, numColumn).toString());
+                                            if(valTabla<=val)
+                                            {
+                                                    cadenaRegis+="{" ;
+                                                    for (int j = 0; j < tabla.getColumnCount(); j++) 
+                                                    {
+                                                         String clave=tabla.getValueAt(1, j).toString(); //obtengo clave
+                                                         String clave2=clave.substring(1,clave.length()-1); //quito comillas de clave
+                                                         String registro=tabla.getValueAt(i,j).toString(); //obtengo el registro de esa clave
+                                                         cadenaRegis+=clave2 + ":" ;
+                                                         cadenaRegis+=registro + "," ;
+                                                    }
+                                                    cadenaRegis+="} \n" ;
+                                            }                                            
+                                        }
+                                        cadenaRegis += "] ";
+                                        String aux=cadenaRegis;
+                                        alExistenciaDeVariable.put(nomFuncion,aux);
+                                }
+                                else if(operador.equals("=="))
+                                {   
+                                        Double val=Double.parseDouble(valor);
+                                        for (int i = 2; i < tabla.getRowCount(); i++) 
+                                        {                                           
+                                            Double valTabla=Double.parseDouble(tabla.getValueAt(i, numColumn).toString());
+                                            if(Objects.equals(valTabla, val))
+                                            {
+                                                    cadenaRegis+="{" ;
+                                                    for (int j = 0; j < tabla.getColumnCount(); j++) 
+                                                    {
+                                                         String clave=tabla.getValueAt(1, j).toString(); //obtengo clave
+                                                         String clave2=clave.substring(1,clave.length()-1); //quito comillas de clave
+                                                         String registro=tabla.getValueAt(i,j).toString(); //obtengo el registro de esa clave
+                                                         cadenaRegis+=clave2 + ":" ;
+                                                         cadenaRegis+=registro + "," ;
+                                                    }
+                                                    cadenaRegis+="} \n" ;
+                                            }                                            
+                                        }
+                                        cadenaRegis += "] ";
+                                        String aux=cadenaRegis;
+                                        alExistenciaDeVariable.put(nomFuncion,aux);
+                                }
+                                else if(operador.equals("!="))
+                                {
+                                        Double val=Double.parseDouble(valor);
+                                        for (int i = 2; i < tabla.getRowCount(); i++) 
+                                        {                                           
+                                            Double valTabla=Double.parseDouble(tabla.getValueAt(i, numColumn).toString());
+                                            if(!Objects.equals(valTabla, val))
+                                            {
+                                                    cadenaRegis+="{" ;
+                                                    for (int j = 0; j < tabla.getColumnCount(); j++) 
+                                                    {
+                                                         String clave=tabla.getValueAt(1, j).toString(); //obtengo clave
+                                                         String clave2=clave.substring(1,clave.length()-1); //quito comillas de clave
+                                                         String registro=tabla.getValueAt(i,j).toString(); //obtengo el registro de esa clave
+                                                         cadenaRegis+=clave2 + ":" ;
+                                                         cadenaRegis+=registro + "," ;
+                                                    }
+                                                    cadenaRegis+="} \n" ;
+                                            }                                            
+                                        }
+                                        cadenaRegis += "] ";
+                                        String aux=cadenaRegis;
+                                        alExistenciaDeVariable.put(nomFuncion,aux);
+                                }
+                                                                                                 
+                        }
+                        else{
+                            String err="LA CLAVE: " + nomClave + " DE LA FUNCION OBTENERSI: " + nomFuncion + " NO ES TIPO NUMERICO";
+                            pila_imprimirErrores.push(err);
+                        }
+                }
+                else{
+                    String err="LA CLAVE: " + nomClave + " DE LA FUNCION OBTENERSI: " + nomFuncion + " NO HA SIDO ENCONTRADA EN EL ARCHIVO: " + idTipoArchivo;
+                    pila_imprimirErrores.push(err);
+                    }
+    }
+     
+    // ------------------------------------------------------ FUNCION OBTENERSI CADENA----------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------------------------------------------------------
+    public void funcionObtenerSiCadena(DefaultTableModel tabla, String nomClave, String operador, String valor, String idTipoArchivo, String nomFuncion)
+    {
+        boolean encontrado=false;
+        int numColumn=0;
+        String cadenaRegis="[ \n";
+        
+                for (int i = 0; i < tabla.getColumnCount(); i++) 
+                {
+                    String claveActual=tabla.getValueAt(1, i).toString();
+                    if(claveActual.equals(nomClave))
+                    {
+                        encontrado=true;
+                        numColumn=i;
+                    }
+                }
+
+                if(encontrado==true)
+                {
+                        if(tabla.getValueAt(0, numColumn).toString().equals("string"))
+                        {
+                                if(operador.equals(">"))
+                                {
+                                   String err="LA CLAVE: " + nomClave + " DE LA FUNCION OBTENERSI: " + nomFuncion + " NO PUEDE HACER EL TIPO DE COMPARACION '<'";
+                                   pila_imprimirErrores.push(err);                                       
+                                }
+                                else if(operador.equals("<"))
+                                {
+                                   String err="LA CLAVE: " + nomClave + " DE LA FUNCION OBTENERSI: " + nomFuncion + " NO PUEDE HACER EL TIPO DE COMPARACION '<'";
+                                   pila_imprimirErrores.push(err);     
+                                }
+                                else if(operador.equals(">="))
+                                {
+                                   String err="LA CLAVE: " + nomClave + " DE LA FUNCION OBTENERSI: " + nomFuncion + " NO PUEDE HACER EL TIPO DE COMPARACION '<'";
+                                   pila_imprimirErrores.push(err); 
+                                }
+                                else if(operador.equals("<="))
+                                {
+                                   String err="LA CLAVE: " + nomClave + " DE LA FUNCION OBTENERSI: " + nomFuncion + " NO PUEDE HACER EL TIPO DE COMPARACION '<'";
+                                   pila_imprimirErrores.push(err);  
+                                }
+                                else if(operador.equals("=="))
+                                {   
+                                        for (int i = 2; i < tabla.getRowCount(); i++) 
+                                        {                                           
+                                            String valTabla=tabla.getValueAt(i, numColumn).toString();
+                                            if(valor.equals(valTabla))
+                                            {
+                                                    cadenaRegis+="{" ;
+                                                    for (int j = 0; j < tabla.getColumnCount(); j++) 
+                                                    {
+                                                         String clave=tabla.getValueAt(1, j).toString(); //obtengo clave
+                                                         String clave2=clave.substring(1,clave.length()-1); //quito comillas de clave
+                                                         String registro=tabla.getValueAt(i,j).toString(); //obtengo el registro de esa clave
+                                                         cadenaRegis+=clave2 + ":" ;
+                                                         cadenaRegis+=registro + "," ;
+                                                    }
+                                                    cadenaRegis+="} \n" ;
+                                            }                                            
+                                        }
+                                        cadenaRegis += "] ";
+                                        String aux=cadenaRegis;
+                                        alExistenciaDeVariable.put(nomFuncion,aux);
+                                }
+                                else if(operador.equals("!="))
+                                {
+                                        for (int i = 2; i < tabla.getRowCount(); i++) 
+                                        {                                           
+                                            String valTabla=tabla.getValueAt(i, numColumn).toString();
+                                            if(!valor.equals(valTabla))
+                                            {
+                                                    cadenaRegis+="{" ;
+                                                    for (int j = 0; j < tabla.getColumnCount(); j++) 
+                                                    {
+                                                         String clave=tabla.getValueAt(1, j).toString(); //obtengo clave
+                                                         String clave2=clave.substring(1,clave.length()-1); //quito comillas de clave
+                                                         String registro=tabla.getValueAt(i,j).toString(); //obtengo el registro de esa clave
+                                                         cadenaRegis+=clave2 + ":" ;
+                                                         cadenaRegis+=registro + "," ;
+                                                    }
+                                                    cadenaRegis+="} \n" ;
+                                            }                                            
+                                        }
+                                        cadenaRegis += "] ";
+                                        String aux=cadenaRegis;
+                                        alExistenciaDeVariable.put(nomFuncion,aux);
+                                }
+                                                                                                 
+                        }
+                        else{
+                            String err="LA CLAVE: " + nomClave + " DE LA FUNCION OBTENERSI: " + nomFuncion + " NO ES TIPO CADENA";
+                            pila_imprimirErrores.push(err);
+                        }
+                }
+                else{
+                    String err="LA CLAVE: " + nomClave + " DE LA FUNCION OBTENERSI: " + nomFuncion + " NO HA SIDO ENCONTRADA EN EL ARCHIVO: " + idTipoArchivo;
+                    pila_imprimirErrores.push(err);
+                    }
+    }
+      
+
+    public void graficar(DefaultTableModel tabla, String nombreimg, String titulo, String idTipoArchivo, String valx, String valy)
+    {
+        boolean encontrado=false;
+        boolean encontrado2=false;
+        int numColumn=0;
+        int numColumn2=0;
+        String cadenaRegis="[ \n";
+        
+                for (int i = 0; i < tabla.getColumnCount(); i++) 
+                {
+                    String claveActual=tabla.getValueAt(1, i).toString();
+                    if(claveActual.equals(valx))
+                    {
+                        encontrado=true;
+                        numColumn=i;
+                    }
+                    if(claveActual.equals(valy))
+                    {
+                        encontrado2=true;
+                        numColumn2=i;
+                    }
+                }
+
+                if(encontrado==true && encontrado2==true)
+                {
+                        if(tabla.getValueAt(0, numColumn).toString().equals("string") && tabla.getValueAt(0, numColumn2).toString().equals("numerico") )
+                        {
+                                
+                            DefaultCategoryDataset datos = new DefaultCategoryDataset();
+
+                            for (int i = 2; i < tabla.getRowCount(); i++) 
+                            {
+                                String x=tabla.getValueAt(i, numColumn).toString();
+                                Double y=Double.parseDouble(tabla.getValueAt(i, numColumn2).toString());
+                                datos.setValue(y,x,"");
+                                
+                            }
+
+                            String tit=titulo.substring(1,titulo.length()-1);
+                            String xs=valx.substring(1,valx.length()-1);
+                            String ys=valy.substring(1,valy.length()-1);
+
+                            JFreeChart grafico_barras = ChartFactory.createBarChart(tit,xs,ys, datos, PlotOrientation.VERTICAL, true, true, false);
+
+                            try 
+                            {
+                              String nomimg=nombreimg.substring(1,nombreimg.length()-1);
+                              String guard=nomimg+".PNG";
+                              ChartUtilities.saveChartAsPNG(new File(guard), grafico_barras, 1000, 800);
+                            } catch (Exception e) {
+                                    e.printStackTrace();
+                            }                                                                                                      
+                        }
+                        else{
+                            String err="UNA O AMBAS DE LAS CLAVES: " + valx + " Y " + valy + " DE LA FUNCION GRAFICAR NO SON DEL TIPO DE DATO CORRECTO";
+                            pila_imprimirErrores.push(err);
+                        }
+                }
+                else{
+                    String err="UNA O AMBAS DE LAS CLAVES: " + valx + " Y " + valy + " DE LA FUNCION GRAFICAR NO HAN SIDO ENCONTRADAS EN EL ARCHIVO: " + idTipoArchivo;
+                    pila_imprimirErrores.push(err);
+                    }
+    }
+    
+    
+    //Metodo al que se llama automaticamente ante algun error sintactico
+    public void syntax_error(Symbol s)
+    {        
+        String lexema = s.value.toString();
+        int fila = s.right;
+        int columna = s.left;
+        
+        //String aa="ERROR SINTACTICO: FUNCI " + "Lexema: " + lexema + " Fila: " + fila + " Columna: " + columna + "\n";
+        //System.out.println(aa);
+        //System.out.println("\t\tLexema: "+lexema);
+        //System.out.println("\t\tFila: "+fila);
+        //System.out.println("\t\tColumna: "+columna);
+                
+                
+    }
+
+    //Metodo al que se llama en el momento en que ya no es posible una recuperacion de errores
+    public void unrecovered_syntax_error(Symbol s) throws java.lang.Exception
+    {        
+        String lexema = s.value.toString();
+        int fila = s.right;
+        int columna = s.left;
+        
+        //System.out.println("!!!!!!! Error Sintactico FUNCIONES!!!!!!! ");
+        //System.out.println("\t\tLexema: "+lexema);
+        //System.out.println("\t\tFila: "+fila);
+        //System.out.println("\t\tColumna: "+columna);
+        
+
+    }
+:}
+
+//-------------> Codigo para las acciones gramaticales
+action code
+{:
+:}
+
+/*----------------------AREA 2: DECLARACIONES-------------------------*/
+
+//--------------->declaracion de terminales
+//-------->simbolos
+terminal igual, corchabre, corchcierra, llaveabre, llavecierra, parenabre, parencierra, coma, puntocoma, punto, menos;
+
+//--------> operadores
+terminal mayor, menor, mayorigualque, menorigualque, igualigual, diferenteque;
+
+//-------->de palabras reservadas
+terminal claves, registros, archivo, leerarchivo, imprimir, numerico, sumar, contar, promedio, contarsi, cadenareserv, obtenersi, graficar;
+
+//-------->de expresiones regulares
+terminal id, cadena, enteroposit;
+    
+//--------------->declaracion de no terminales
+non terminal INICIO, OPERADORES, VALORES_CLAVE, REGISTROS, VALORES_REGISTROS, VALOR, IMPRICOCAT;
+
+start with INICIO;
+
+/*----------------------AREA 3: REGLAS SEMANTICAS-------------------------*/
+
+INICIO::= claves igual corchabre VALORES_CLAVE corchcierra INICIO
+
+        | registros igual corchabre REGISTROS corchcierra INICIO
+
+       /* | imprimir parenabre id parencierra puntocoma INICIO
+            {::} 
+
+        | imprimir parenabre cadena:a parencierra puntocoma INICIO
+            {::}*/
+        
+        | imprimir parenabre IMPRICOCAT:a parencierra puntocoma INICIO
+
+        | archivo id:a igual leerarchivo parenabre cadena:b parencierra puntocoma INICIO
+            {::}
+        
+        | numerico id:a igual sumar parenabre id:b coma cadena:c parencierra puntocoma INICIO
+        {: if(alExistenciaDeVariable.containsKey(a.toString()))
+            {
+               String exis="LA VARIABLE " + a.toString() + " YA EXISTE!" ;
+               pila_imprimirErrores.push(exis); 
+            }else
+                {  if(alExistenciaDeVariable.containsKey(b.toString()))
+                   {
+                        DefaultTableModel tabla=hmTablasArchivos.get(b.toString());
+                        funcionSumar(tabla, c.toString(), b.toString(), a.toString() ); 
+                   }else{
+                        String err="EL IDENTIFICADOR TIPO ARCHIVO " + b.toString() + " DE LA FUNCION SUMAR: " + a.toString() + " NO HA SIDO ENCONTRADA" ;
+                        pila_imprimirErrores.push(err); 
+                   }
+                } :}
+
+        | numerico id:a igual contar parenabre id:b parencierra puntocoma INICIO 
+        {: if(alExistenciaDeVariable.containsKey(a.toString()))
+            {
+               String exis="LA VARIABLE " + a.toString() + " YA EXISTE!" ;
+               pila_imprimirErrores.push(exis); 
+            }else
+                {  if(alExistenciaDeVariable.containsKey(b.toString()))
+                   {
+                        DefaultTableModel tabla=hmTablasArchivos.get(b.toString());
+                        funcionContar(tabla, a.toString()); 
+                   }else{
+                        String err="EL IDENTIFICADOR TIPO ARCHIVO " + b.toString() + " DE LA FUNCION CONTAR: " + a.toString() + " NO HA SIDO ENCONTRADA" ;
+                        pila_imprimirErrores.push(err); 
+                   }
+                } :}
+
+        | numerico id:a igual promedio parenabre id:b coma cadena:c parencierra puntocoma INICIO
+        {: if(alExistenciaDeVariable.containsKey(a.toString()))
+            {
+               String exis="LA VARIABLE " + a.toString() + " YA EXISTE!" ;
+               pila_imprimirErrores.push(exis); 
+            }else
+                {  if(alExistenciaDeVariable.containsKey(b.toString()))
+                   {
+                        DefaultTableModel tabla=hmTablasArchivos.get(b.toString());
+                        funcionPromedio(tabla, c.toString(), b.toString(), a.toString() ); 
+                   }else{
+                        String err="EL IDENTIFICADOR TIPO ARCHIVO " + b.toString() + " DE LA FUNCION PROMEDIO: " + a.toString() + " NO HA SIDO ENCONTRADA" ;
+                        pila_imprimirErrores.push(err); 
+                   }
+                }  :}
+
+        | numerico id:a igual contarsi parenabre id:b coma cadena:c coma OPERADORES:op coma VALOR:va parencierra puntocoma INICIO
+            {: if(alExistenciaDeVariable.containsKey(a.toString()))
+            {
+               String exis="LA VARIABLE " + a.toString() + " YA EXISTE!" ;
+               pila_imprimirErrores.push(exis); 
+            }else
+            {  if(alExistenciaDeVariable.containsKey(b.toString()))
+               {
+                    DefaultTableModel tabla=hmTablasArchivos.get(b.toString());
+                    funcionContarSi(tabla, c.toString(), op.toString(), va.toString(), b.toString(), a.toString()); 
+               }else{
+                    String err="EL IDENTIFICADOR TIPO ARCHIVO " + b.toString() + " DE LA FUNCION CONTARSI: " + a.toString() + " NO HA SIDO ENCONTRADA" ;
+                    pila_imprimirErrores.push(err); 
+               }
+            } :}
+
+        | numerico id:a igual contarsi parenabre id:b coma cadena:c coma OPERADORES:op coma cadena:va parencierra puntocoma INICIO
+            {: if(alExistenciaDeVariable.containsKey(a.toString()))
+            {
+               String exis="LA VARIABLE " + a.toString() + " YA EXISTE!" ;
+               pila_imprimirErrores.push(exis); 
+            }else
+            {  if(alExistenciaDeVariable.containsKey(b.toString()))
+               {
+                    DefaultTableModel tabla=hmTablasArchivos.get(b.toString());
+                    funcionContarSiCadena(tabla, c.toString(), op.toString(), va.toString(), b.toString(), a.toString()); 
+               }else{
+                    String err="EL IDENTIFICADOR TIPO ARCHIVO " + b.toString() + " DE LA FUNCION CONTARSI: " + a.toString() + " NO HA SIDO ENCONTRADA" ;
+                    pila_imprimirErrores.push(err); 
+               }
+            } :}
+
+        | cadenareserv id:a igual obtenersi parenabre id:b coma cadena:c coma OPERADORES:op coma VALOR:va parencierra puntocoma INICIO
+            {: if(alExistenciaDeVariable.containsKey(a.toString()))
+            {
+               String exis="LA VARIABLE " + a.toString() + " YA EXISTE!" ;
+               pila_imprimirErrores.push(exis); 
+            }else
+            {  if(alExistenciaDeVariable.containsKey(b.toString()))
+               {
+                    DefaultTableModel tabla=hmTablasArchivos.get(b.toString());
+                    funcionObtenerSi(tabla, c.toString(), op.toString(), va.toString(), b.toString(), a.toString()); 
+               }else{
+                    String err="EL IDENTIFICADOR TIPO ARCHIVO " + b.toString() + " DE LA FUNCION OBTENERSI: " + a.toString() + " NO HA SIDO ENCONTRADA" ;
+                    pila_imprimirErrores.push(err); 
+               }
+            } :}
+
+        | cadenareserv id:a igual obtenersi parenabre id:b coma cadena:c coma OPERADORES:op coma cadena:va parencierra puntocoma INICIO
+            {: if(alExistenciaDeVariable.containsKey(a.toString()))
+            {
+               String exis="LA VARIABLE " + a.toString() + " YA EXISTE!" ;
+               pila_imprimirErrores.push(exis); 
+            }else
+            {  if(alExistenciaDeVariable.containsKey(b.toString()))
+               {
+                    DefaultTableModel tabla=hmTablasArchivos.get(b.toString());
+                    funcionObtenerSiCadena(tabla, c.toString(), op.toString(), va.toString(), b.toString(), a.toString()); 
+               }else{
+                    String err="EL IDENTIFICADOR TIPO ARCHIVO " + b.toString() + " DE LA FUNCION OBTENERSI: " + a.toString() + " NO HA SIDO ENCONTRADA" ;
+                    pila_imprimirErrores.push(err); 
+               }
+            } :}
+
+        | graficar parenabre cadena:nom coma cadena:tit coma id:arch coma cadena:vax coma cadena:vay parencierra puntocoma INICIO
+            {: if(alExistenciaDeVariable.containsKey(arch.toString()))
+               {
+                    DefaultTableModel tabla=hmTablasArchivos.get(arch.toString());
+                    graficar(tabla, nom.toString(), tit.toString(), arch.toString(), vax.toString(), vay.toString()); 
+               }else{
+                    String err="EL IDENTIFICADOR TIPO ARCHIVO " + arch.toString() + " DE LA FUNCION GRAFICAR: NO HA SIDO ENCONTRADA" ;
+                    pila_imprimirErrores.push(err); 
+               } :}
+
+        | ;
+
+IMPRICOCAT::= IMPRICOCAT coma cadena
+
+            | IMPRICOCAT coma id
+
+            | cadena
+
+            | id ;
+
+OPERADORES::= mayor:a
+            {: RESULT=a.toString(); :}
+            | menor:a
+            {: RESULT=a.toString(); :}
+            | mayorigualque:a
+            {: RESULT=a.toString(); :}
+            | menorigualque:a
+            {: RESULT=a.toString(); :}
+            | igualigual:a
+            {: RESULT=a.toString(); :}
+            | diferenteque:a
+            {: RESULT=a.toString(); :} ;
+
+VALOR::= enteroposit:a
+         {: RESULT=a.toString(); :}
+        | menos:a enteroposit:b
+         {: String c=a.toString() + b.toString(); 
+            RESULT=c; :}
+        | enteroposit:a punto:b enteroposit:c
+         {: String d=a.toString() + b.toString() + c.toString(); 
+            RESULT=d; :}
+        | menos:a enteroposit:b punto:c enteroposit:d
+         {: String e=a.toString() + b.toString() + c.toString() + d.toString();
+            RESULT=e; :} ;
+
+VALORES_CLAVE::= cadena:a coma VALORES_CLAVE
+                    {: :}
+                | cadena:a 
+                    {: :} ;
+
+
+REGISTROS::= llaveabre VALORES_REGISTROS llavecierra REGISTROS
+                    {:  :} 
+             | ;          
+
+VALORES_REGISTROS::= cadena:a coma VALORES_REGISTROS
+                    {: :}
+                    
+                    | enteroposit:a coma VALORES_REGISTROS
+                    {::}
+
+                    | menos:a enteroposit:b coma VALORES_REGISTROS
+                    {::}
+
+                    | enteroposit:a punto:b enteroposit:c coma VALORES_REGISTROS
+                    {::}
+
+                    | menos:a enteroposit:b punto:c enteroposit:d coma VALORES_REGISTROS
+                    {::}
+
+                    | enteroposit:a punto:b enteroposit:c
+                    {::}
+
+                    | menos:a enteroposit:b punto:c enteroposit:d
+                    {::}
+
+                    | cadena:a
+                    {::}
+                    
+                    | enteroposit:a
+                    {::} 
+
+                    | menos:a enteroposit:b
+                    {::}   ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//-----------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------

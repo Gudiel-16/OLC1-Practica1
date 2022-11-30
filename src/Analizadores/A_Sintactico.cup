@@ -1,0 +1,494 @@
+/*----------------------AREA 1: CODIGO DE USUARIO-------------------------*/
+
+//---------------> importaciones, paquetes
+package Analizadores;
+import java_cup.runtime.Symbol;
+import java.io.*;
+import java.util.*;
+import java.text.*;
+import java.util.Stack;
+import javax.swing.JTable;
+import javax.swing.table.DefaultTableModel;
+
+//---------------> codigo para el parser, variables, metodos
+parser code
+{:      
+    
+    //para el metodo leer archivos
+    Stack<String> pila_claves = new Stack<String>();
+    Stack<Object> pila_registros = new Stack<Object>();
+
+    //para las tablas de registros de archivos
+    public DefaultTableModel modeloTablaArchivo;
+    public static HashMap<String,DefaultTableModel> hmTablasArchivos= new HashMap<String,DefaultTableModel>();
+    
+    //para errores
+    public static Stack<String> pila_imprimirErrores = new Stack<String>();
+    public static Stack<String> pila_imprimirErroresLexSintArchi = new Stack<String>();
+
+    //para guardar variables y verificar si existe la variable
+    public static HashMap<String,Object> alExistenciaDeVariable= new HashMap<String,Object>();
+
+    public int contCuantasClaves=0;
+    public int contRegistros=0;
+
+    //para guardar los errores sintacticos
+    public static Object [] encabezado={"","",""};
+    public static DefaultTableModel tablaerroresSintacticos=new DefaultTableModel(encabezado,0);
+
+    //para verificar si hay error sintactico en archivo datos
+    public boolean errorSintacticoArchivo=false;
+        
+    // ------------------------------busca y devuelve un string con el contenido que tiene un archivo de datos ------------------------------------
+    //---------------------------------------------------------------------------------------------------------------------------------------------
+    String buscarArchivo(String ruta)
+    {
+        String bb="";
+        String rutaBuscar=ruta.substring(1,ruta.length()-1);
+        
+        try {
+            String aa; 
+            FileReader f = new FileReader(rutaBuscar);
+            BufferedReader bf = new BufferedReader(f);
+            while ((aa = bf.readLine())!=null) {
+                bb+=aa+"\n";                
+             }
+        } catch (Exception e) {
+            System.out.println("eror buscar archivo"+e);
+            String er="LA RUTA: " + ruta + " NO HA SIDO ENCONTRADA!";
+            pila_imprimirErrores.push(er);
+        }
+        return bb;
+    }
+
+    //--------------------------------------------para leer la estructura de un archivo------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------------------------------------------------------
+    public void leerArchivo(String texto, String idArchivo)
+    {
+        try {
+            Analizador_Lexico_Archivos lexico= new Analizador_Lexico_Archivos(new BufferedReader(new StringReader(texto)));
+            analisis_sintactico sintactico = new analisis_sintactico(lexico);
+            lexico.errorLexicoArchivo=false;
+            sintactico.errorSintacticoArchivo=false;            
+            sintactico.parse(); 
+            if(sintactico.errorSintacticoArchivo==false && lexico.errorLexicoArchivo==false)
+            {
+                if(sintactico.verificarSiNumeroRegistrosConcuerdanConClaves(idArchivo,sintactico.contCuantasClaves ,sintactico.contRegistros)==true)
+                {
+                    if(sintactico.ingresarClavesYRegistrosEnTabla(idArchivo,sintactico.pila_claves,sintactico.pila_registros,sintactico.contCuantasClaves ,sintactico.contRegistros)==true)
+                    {
+                            sintactico.guardarIDArchivoDatosYContenido(idArchivo,sintactico.pila_claves,sintactico.contCuantasClaves ,sintactico.contRegistros);
+                    }
+                } 
+            }else{
+                String er="EL ARCHIVO: " + idArchivo + " CONTIENE ERRORES LEXICOS O SINTACTICOS!";
+                pila_imprimirErroresLexSintArchi.push(er);
+            }
+
+                       
+        } catch (Exception e) {
+            System.out.println("error funcion leer archivo"+e.getMessage());
+        }
+    }
+   
+
+    //------------------------------verifica si los registros concuerdan con el numero de claves ----------------------------------------------------
+    //---------------------------------------------------------------------------------------------------------------------------------------------
+    public boolean verificarSiNumeroRegistrosConcuerdanConClaves(String idArchivo,int numClaves, int numRegistros)
+    {   
+        boolean ve=true;     
+       if(numRegistros%numClaves!=0)
+       {
+          String aa="ERROR EN EL ARCHIVO: " + idArchivo + " LA CANTIDAD DE DATOS DE UNO A VARIOS REGISTROS ES INCORRECTA";
+          pila_imprimirErrores.push(aa);
+          ve=false;
+       }
+       return ve;
+    }
+
+    // ------------------------------ concatena la forma de mostrar en consola un archivo de datos--------------------------------------------------
+    //---------------------------------------------------------------------------------------------------------------------------------------------
+    public void guardarIDArchivoDatosYContenido(String idArchivo, Stack claves,int numClaves, int numRegistros)
+    {
+       int reg =numRegistros / numClaves;
+       Stack<String> pilacla = (Stack<String>)claves.clone(); 
+       String cla="Claves= [";
+       while(!pilacla.empty())
+       {
+            cla+=pilacla.pop() + ",";
+       }
+       cla+="]" + "\n";
+       cla+= "Numero de registros= " + reg;
+       //contenidoImpriArchivo.put(idArchivo,cla);
+       alExistenciaDeVariable.put(idArchivo,cla);
+    }
+
+    //------------------------------guarda el contenido de los archivos en modelo de tablas -------------------------------------------------------
+    //---------------------------------------------------------------------------------------------------------------------------------------------
+    public boolean ingresarClavesYRegistrosEnTabla(String idArchivo, Stack claves, Stack registros, int numClaves, int numRegistros)
+    {
+       Stack<String> pilacla = (Stack<String>)claves.clone(); 
+       Stack<String> pilareg = (Stack<String>)registros.clone();
+       
+       ArrayList<String> lista = new ArrayList<String>(); //para los registros
+       ArrayList<String> lista2 = new ArrayList<String>(); //para las claves
+       ArrayList<String> lista3 = new ArrayList<String>(); //para darle vuelta a los registros
+       String list=""; //para guardar el .pop de pilareg
+       
+       String cla="{"; //para concatenar las claves
+       String reg=""; //como auxiliar para concatenar claves
+       String regis=""; //para concatenar para meterlo de la forma: { {a,b,c} , {d,e,f} , {g,h,i} }
+       
+       boolean guardomodelotable=true;
+       
+       int contador=0;
+       int cuandoTermina=numRegistros/numClaves;
+       int contadorCuandoTermina=0;
+
+       while(!pilacla.empty())
+       {
+            reg=pilacla.pop();
+            lista2.add(reg);
+            cla+=reg + ",";
+       }
+       String a=cla.substring(0,cla.length()-1); 
+       cla=a;
+       cla+="}";
+       
+       //para agregar a la 'lista' los registros
+       for (int i = 0; i < numRegistros; i++) 
+        {    
+            contador++;
+            if(contador==numClaves)
+            {
+               list=pilareg.pop();
+               lista.add(list);
+               contador=0;
+               
+            }else
+            {
+               list=pilareg.pop();
+               lista.add(list);
+            }            
+        }
+       
+       //para darle vuelta y agregar a nueva 'lista3'
+       for (int i = lista.size()-numClaves; i >= 0; i-=numClaves) 
+        {
+            for (int j = i; j < (i+numClaves); j++) 
+            {
+                lista3.add(lista.get(j));
+            }
+        }
+                     
+        JTable prueba=new JTable();        
+        Object [] encabezado=new Object[numClaves]; //se crea un array del tamanio del numero de claves
+        
+        //se llena el encabezado para pasarlo como parametro en el modelo
+        for (int i = 0; i < numClaves; i++) 
+        {            
+            encabezado[i]=i;            
+        }
+                
+        modeloTablaArchivo=new DefaultTableModel(encabezado, 0); //se crea el modelo con el numero de columnas 'encabezado'
+        Object [] ingresar= new Object[numClaves]; //para ir agregando las filas al modelo
+        
+        //para agregar a la tabla el tipo de dato de cada columna
+        for (int i = 0; i < numClaves; i++) 
+        {
+            String temp=lista3.get(i);
+            //para saber si es numerico o string
+            try {
+                Double aux=Double.parseDouble(temp); //si lo coniverte es numero o decimal
+                ingresar[i]="numerico";
+            } catch (Exception e) {
+                ingresar[i]="string";
+            }          
+        }
+        modeloTablaArchivo.addRow(ingresar);
+        Arrays.fill(ingresar, null); //me limpia el array
+        
+        //para agregar a la tabla nombre de las claves
+        for (int i = 0; i < numClaves; i++) 
+        {
+            String temp=lista2.get(i);
+            //temp=temp.substring(1,temp.length()-1);//para quitarle las comillas a las claves
+            ingresar[i]=temp;         
+        }
+        modeloTablaArchivo.addRow(ingresar);
+        Arrays.fill(ingresar, null); //me limpia el array
+        
+        //para agregar al modelo
+       for (int i = 0; i < numRegistros; i++) //para que no agregue el primer registro que nos dice el tipo de dato
+        {    
+            contador++;
+            if(contador==numClaves) //cada vez que termine un bloque registro 
+            {
+               ingresar[contador-1]=lista3.get(i);
+               modeloTablaArchivo.addRow(ingresar);
+               Arrays.fill(ingresar, null);
+               contador=0;
+               
+            }else if(i%numClaves==0) 
+            {
+               ingresar[contador-1]=lista3.get(i);
+            }
+            else 
+            {
+               ingresar[contador-1]=lista3.get(i); 
+            }            
+        }
+       
+
+       //impresion de tabla
+//        for (int i = 0; i < modeloTablaArchivo.getRowCount(); i++) 
+//        {
+//            for (int j = 0; j < modeloTablaArchivo.getColumnCount(); j++) 
+//            {
+//                System.out.print(modeloTablaArchivo.getValueAt(i, j)+ "  ");
+//            }
+//            System.out.println("");
+//        }
+        
+        //verificar el tipo de dato de cada registro
+        for (int i = 2; i < modeloTablaArchivo.getRowCount(); i++) 
+        {
+            for (int j = 0; j < modeloTablaArchivo.getColumnCount(); j++) //comienza en 2, ya que la fila 0 es el tipo de dato y fila 1 nombre de clave
+            {
+                String temp=modeloTablaArchivo.getValueAt(i, j).toString(); //capturamos el valor de una celda de tabla
+                
+                try { //se trata de convertir a numerico
+                    Double aux=Double.parseDouble(temp); //si lo coniverte es numero o decimal
+                    if (modeloTablaArchivo.getValueAt(0, j).equals("numerico")) 
+                    {                        
+                    }
+                    else if (modeloTablaArchivo.getValueAt(0, j).equals("string")) 
+                    {
+                        String er="ERROR EN EL ARCHIVO: " + idArchivo + "  --> EL REGISTRO: " + temp + " NO ES DEL TIPO DE DATO CORRECTO";
+                        pila_imprimirErrores.push(er);
+                        guardomodelotable=false;
+                    }
+                
+                } catch (Exception e) //cuando el registro es string
+                {
+                    if (modeloTablaArchivo.getValueAt(0, j).equals("string")) 
+                    {                        
+                    }
+                    else if (modeloTablaArchivo.getValueAt(0, j).equals("numerico")) 
+                    {
+                        String er="ERROR EN EL ARCHIVO: " + idArchivo + "  --> EL REGISTRO: " + temp + " NO ES DEL TIPO DE DATO CORRECTO";
+                        pila_imprimirErrores.push(er);
+                        guardomodelotable=false;
+                    }                    
+                } 
+            }
+        }  
+
+        if(guardomodelotable==true) //si no hay errores me guarda el modelo de tabla
+        {
+            hmTablasArchivos.put(idArchivo,modeloTablaArchivo);
+        }
+        return guardomodelotable;    
+    }
+    
+    
+    //Metodo al que se llama automaticamente ante algun error sintactico
+    public void syntax_error(Symbol s)
+    {        
+        String lexema = s.value.toString();
+        int fila = s.right;
+        int columna = s.left;
+        
+        Object[] cars = {lexema, fila, columna};
+        tablaerroresSintacticos.addRow(cars);
+        //String aa="ERROR SINTACTICO: PRINCI " + "Lexema: " + lexema + " Fila: " + fila + " Columna: " + columna + "\n";
+        //System.out.println(aa);        
+        //System.out.println("\t\tLexema: "+lexema);
+        //System.out.println("\t\tFila: "+fila);
+        //System.out.println("\t\tColumna: "+columna);
+        errorSintacticoArchivo=true;       
+                
+    }
+
+    //Metodo al que se llama en el momento en que ya no es posible una recuperacion de errores
+    public void unrecovered_syntax_error(Symbol s) throws java.lang.Exception
+    {        
+        String lexema = s.value.toString();
+        int fila = s.right;
+        int columna = s.left;
+        
+        //System.out.println("!!!!!!! Error Sintactico NORMAL!!!!!!! ");
+        //System.out.println("\t\tLexema: "+lexema);
+        //System.out.println("\t\tFila: "+fila);
+        //System.out.println("\t\tColumna: "+columna);
+        
+
+    }
+:}
+
+//-------------> Codigo para las acciones gramaticales
+action code
+{:
+:}
+
+/*----------------------AREA 2: DECLARACIONES-------------------------*/
+
+//--------------->declaracion de terminales
+//-------->simbolos
+terminal igual, corchabre, corchcierra, llaveabre, llavecierra, parenabre, parencierra, coma, puntocoma, punto, menos;
+
+//--------> operadores
+terminal mayor, menor, mayorigualque, menorigualque, igualigual, diferenteque;
+
+//-------->de palabras reservadas
+terminal claves, registros, archivo, leerarchivo, imprimir, numerico, sumar, contar, promedio, contarsi, cadenareserv, obtenersi, graficar;
+
+//-------->de expresiones regulares
+terminal id, cadena, enteroposit;
+    
+//--------------->declaracion de no terminales
+non terminal INICIO, OPERADORES, VALORES_CLAVE, REGISTROS, VALORES_REGISTROS, VALOR, IMPRICOCAT;
+
+start with INICIO;
+
+/*----------------------AREA 3: REGLAS SEMANTICAS-------------------------*/
+
+INICIO::= claves igual corchabre VALORES_CLAVE corchcierra INICIO
+
+        | registros igual corchabre REGISTROS corchcierra INICIO
+
+        /* | imprimir parenabre id parencierra puntocoma INICIO
+            {::} 
+
+        | imprimir parenabre cadena:a parencierra puntocoma INICIO
+            {::}*/
+        
+        | imprimir parenabre IMPRICOCAT:a parencierra puntocoma INICIO
+
+        | archivo id:a igual leerarchivo parenabre cadena:b parencierra puntocoma INICIO
+            {: if(alExistenciaDeVariable.containsKey(a.toString()))
+                {
+                   String exis="LA VARIABLE " + a.toString() + " YA EXISTE! \n" ;
+                   pila_imprimirErrores.push(exis); 
+                }else
+                {
+                String datos=buscarArchivo(b.toString());
+                leerArchivo(datos, a.toString()); }              
+            :}
+        
+        | numerico id igual sumar parenabre id coma cadena parencierra puntocoma INICIO
+
+        | numerico id igual contar parenabre id parencierra puntocoma INICIO  
+
+        | numerico id igual promedio parenabre id coma cadena parencierra puntocoma INICIO
+
+        | numerico id igual contarsi parenabre id coma cadena coma OPERADORES coma VALOR parencierra puntocoma INICIO
+
+        | numerico id igual contarsi parenabre id coma cadena coma OPERADORES coma cadena parencierra puntocoma INICIO
+
+        | cadenareserv id igual obtenersi parenabre id coma cadena coma OPERADORES coma VALOR parencierra puntocoma INICIO
+
+        | cadenareserv id igual obtenersi parenabre id coma cadena coma OPERADORES coma cadena parencierra puntocoma INICIO
+
+        | graficar parenabre cadena coma cadena coma id coma cadena coma cadena parencierra puntocoma INICIO
+
+        | ;
+
+IMPRICOCAT::= IMPRICOCAT coma cadena
+
+            | IMPRICOCAT coma id
+
+            | cadena
+
+            | id ;
+
+OPERADORES::= mayor
+            | menor
+            | mayorigualque
+            | menorigualque
+            | igualigual
+            | diferenteque ;
+
+VALOR::= enteroposit
+        | menos enteroposit
+        | enteroposit punto enteroposit
+        | menos enteroposit punto enteroposit ;
+
+VALORES_CLAVE::= cadena:a coma VALORES_CLAVE
+                    {: contCuantasClaves++; 
+                        pila_claves.push(a.toString()); :}
+                | cadena:a 
+                    {: contCuantasClaves++; 
+                        pila_claves.push(a.toString()); :} ;
+
+
+REGISTROS::= llaveabre VALORES_REGISTROS llavecierra REGISTROS
+                    {:  :} 
+             | ;          
+
+VALORES_REGISTROS::= cadena:a coma VALORES_REGISTROS
+                    {: contRegistros++;  
+                       pila_registros.push(a.toString()); :}
+                    
+                    | enteroposit:a coma VALORES_REGISTROS
+                    {: contRegistros++;
+                       pila_registros.push(a.toString());:}
+
+                    | menos:a enteroposit:b coma VALORES_REGISTROS
+                    {: contRegistros++;
+                       String ing= a.toString() + b.toString();
+                       pila_registros.push(ing); :}
+
+                    | enteroposit:a punto:b enteroposit:c coma VALORES_REGISTROS
+                    {: contRegistros++;
+                       String ing= a.toString() + b.toString() + c.toString();
+                       pila_registros.push(ing); :}
+
+                    | menos:a enteroposit:b punto:c enteroposit:d coma VALORES_REGISTROS
+                    {: contRegistros++;
+                       String ing= a.toString() + b.toString() + c.toString() + d.toString();
+                       pila_registros.push(ing); :}
+
+                    | enteroposit:a punto:b enteroposit:c
+                    {: contRegistros++;
+                       String ing= a.toString() + b.toString() + c.toString();
+                       pila_registros.push(ing); :}
+
+                    | menos:a enteroposit:b punto:c enteroposit:d
+                    {: contRegistros++;
+                       String ing= a.toString() + b.toString() + c.toString() + d.toString();
+                       pila_registros.push(ing); :}
+
+                    | cadena:a
+                    {: contRegistros++;  
+                       pila_registros.push(a.toString()); :}
+                    
+                    | enteroposit:a
+                    {: contRegistros++; 
+                       pila_registros.push(a.toString()); :} 
+
+                    | menos:a enteroposit:b
+                    {: contRegistros++; 
+                       String ing= a.toString() + b.toString();
+                       pila_registros.push(ing); :}   ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//-----------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------
